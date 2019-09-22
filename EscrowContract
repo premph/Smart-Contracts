@@ -1,0 +1,64 @@
+pragma solidity ^0.5.1;
+
+// code version 2.1 1566934456
+
+contract Escrow {
+  address payable  renter;              // renter's address
+  address payable  owner;               // owner's address
+  uint  timeToExpiry;                   // time to expiry to be entered in seconds
+  uint  startTime;
+  uint  deposit;                        // initial value for contract
+  uint  totaldep;                       // keep tracks of total deposit done to owner
+  uint  digitalKey;                     // digital key value
+  
+  constructor(address payable _owner, uint _timeToExpiry, uint _digitalKey) public payable {
+    renter = msg.sender;                // renter has value of the account which deployed the contract
+    owner = _owner;
+    digitalKey = _digitalKey;
+    totaldep = 0;
+    startTime = now;                    // unix epoch time at the time of deployment
+    uint x = _timeToExpiry; 
+    timeToExpiry = startTime + x;       // time (trial) expires after this time 
+  }
+  // fallback function allowing to transfer ether from contract to owner
+  function payRent(uint _deposit) public payable {
+    emit isReceived(owner, renter, digitalKey);
+    deposit = _deposit;                 // value of each individual deposit done to owner
+    totaldep += _deposit;               // total deposit done to owner
+    
+   if (msg.sender == renter && isExpired() == false) {
+       owner.transfer(deposit);         // if trial is not expired yet we can deposit ether to owner as many times as we wish
+       
+   }
+  }
+  // fallback function to transfer ether from owner to renter account
+  function moneyBack() public payable {
+      emit isRefunded(owner, renter, digitalKey);
+      owner = msg.sender ;              // select owner address as selected account 
+      
+      if (msg.sender == owner){
+          renter.transfer(totaldep);    // transfer money from owner to renter
+      }
+  }
+
+  function isExpired() public returns (bool) {
+   if(now > timeToExpiry) {             // check is trail has expired
+       moneyBack();
+       cancelContract();
+       return true;
+       
+   }
+  }
+  
+  event isReceived(address _owner, address _renter, uint _digitalKey);
+  event isRefunded(address _owner, address _renter, uint _digitalKey);
+  
+  function cancelContract() public  {       // function to cancel contract and refund amount given to owner 
+                                            // and amount left in contract after deducting gas
+      selfdestruct(renter);                 // refund unspent transaction from contract
+  }
+  
+  function totalAmountReleased() public view returns(uint){     // check the current total deposit to owner
+      return totaldep;
+  }
+}
