@@ -1,0 +1,107 @@
+pragma solidity ^0.5.7;
+
+// ROLL NUMBER - 2016192
+// NAME - PREM PRAKASH HANSDA
+// SUBMISSION DATE SEPT-08-2019
+// BODY OF CODE IS SAME AS WHAT WAS GIVEN IN LAB SESSION, THESE ARE THE CHANGES I HAVE MADE
+// 5 BIDDERS AND 7 ITEMS ADDED
+// BID FUNCTION IMPLEMENTED WITH THE GIVEN 3 CONDIITONS
+// WHEN A BIDDER BIDS IT'S remainingTokens ARE DECREMENTED BY 1 AND TOKENS ARE PUSHED INTO Item.itemTokens
+// REVEAL WINNER ITERATES OVER ALL THE 8 ITEMS IN ARRAY AND A RANDOM NUMBER 0-4 IS PUSHED INTO WINNERID ARRAY
+// MODIFIER FOR revealWinners FUNCTION IS ADDED
+
+contract Auction {
+    //DATA
+    // item details
+        struct Item {
+            uint itemId; // item id
+            uint[] itemTokens; //tokens bid in favor of the item
+        }
+    // Bidders to take part in auction
+    
+        struct Bidder {
+            uint remainingTokens; // remaining token with bidder
+            uint bidderId; // also used as tokenId
+            address addr;//address of the bidder
+        }
+
+        mapping(address => Bidder) tokenDetails; //address to bidder dictionary
+        Bidder [5] bidders; // bidders array
+        Item [8] public items;// items array
+        address[5] public winners; //Array for address of winners
+        address public beneficiary; //owner (beneficiary) of the smart contract
+        uint bidderCount=0; //counter
+        //functions
+        constructor() public payable{ //constructor
+        //Part 1 Task 1. Initialize beneficiary with address of smart contract's
+        /* Initialize items: for example, to initialize just a single item, use the code here. */
+        uint[] memory emptyArray; //token container initialization
+        // A sample initialization
+        items[0] = Item({itemId:0,itemTokens:emptyArray});
+        items[1] = Item({itemId:1,itemTokens:emptyArray});
+        items[2] = Item({itemId:2,itemTokens:emptyArray});
+        items[3] = Item({itemId:3,itemTokens:emptyArray});
+        items[4] = Item({itemId:4,itemTokens:emptyArray});
+        items[5] = Item({itemId:5,itemTokens:emptyArray});
+        items[6] = Item({itemId:6,itemTokens:emptyArray});
+        items[7] = Item({itemId:7,itemTokens:emptyArray});
+        // write a code to initialize all the items
+        }
+        
+        modifier onlyOwner {
+            require(beneficiary == msg.sender);        
+            _;
+            }
+        
+        function register() public payable{
+        bidders[bidderCount].bidderId = bidderCount;
+        // Initialize the address of the bidder.
+        // Remember that bidders self-register and so the msg.sender is the bidder.
+        bidders[bidderCount].remainingTokens = 5 ; // tokens to initialize
+        tokenDetails[msg.sender]=bidders[bidderCount];
+        bidderCount++;
+        
+        
+        }
+        function bid(uint _itemId, uint _count) public payable{
+        // Here itemId is the Id for which bidder has opted for
+        // _count is the number of token used to bid the item.
+        /* Implement following conditions.
+        If the number of tokens remaining with the bidder is < count of tokens bid, OR
+        If there are no tokens remaining with the bidder, revert.
+        If the id of the item for which bid is placed, is greater than the largest Id number of items, then also revert. */
+        // Decrement the remainingTokens by the number of tokens already used
+        // Note: tokenDetails[msg.sender].remainingTokens gives remaining tokens
+        //Update the same balance in bidder's data
+        if (tokenDetails[msg.sender].remainingTokens < _count || tokenDetails[msg.sender].remainingTokens == 0) {revert();}    
+                if (_itemId > 7) {revert();}   
+
+                uint balance = tokenDetails[msg.sender].remainingTokens - _count;
+                
+                tokenDetails[msg.sender].remainingTokens=balance;
+                bidders[tokenDetails[msg.sender].bidderId].remainingTokens=balance;//updating the same balance in bidders map.
+                
+                Item storage bidItem = items[_itemId];
+                for(uint i=0; i<_count;i++) {
+                    bidItem.itemTokens.push(tokenDetails[msg.sender].bidderId);    
+                }
+        }
+
+        function revealWinners() public onlyOwner{
+        /* Iterate over all the items present in the auction.
+        If at least one bidder has placed a bid, randomly select the winner */
+        for (uint id = 0; id < 8; id++) {
+                    Item storage currentItem=items[id];
+                    if(currentItem.itemTokens.length != 0){
+                    // RANDOM NUMBER
+                    uint randomIndex = (block.number / currentItem.itemTokens.length)% currentItem.itemTokens.length; 
+                    // Obtain the winning tokenId
+        
+                    uint winnerId = currentItem.itemTokens[randomIndex];
+                        
+                    winners[id] = bidders[winnerId].addr;
+                        
+                    }
+                }
+        }
+}
